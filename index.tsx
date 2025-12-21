@@ -99,16 +99,16 @@ const ITINERARY_DATA: DayPlan[] = [
     title: '強運、行軍與頂級牛排',
     color: '#a855f7',
     events: [
-      { id: '4-0', day: 4, time: '07:30', location: '西鐵 Inn 新宿', activity: '飯店出發', notes: '前往築地', lat: 35.694, lng: 139.695, type: 'stay' },
-      { id: '4-1', day: 4, time: '08:00', location: '築地場外市場', activity: '吃早餐', notes: '海鮮大賞', lat: 35.665, lng: 139.771, type: 'food' },
-      { id: '4-2', day: 4, time: '09:30', location: '小網神社', activity: '參拜', notes: '強運厄除、洗錢', lat: 35.685, lng: 139.777, type: 'sightseeing' },
-      { id: '4-3', day: 4, time: '11:00', location: '銀座 炸豬排 檍', activity: '午餐', notes: '極上炸豬排', lat: 35.669, lng: 139.761, type: 'food' },
-      { id: '4-4', day: 4, time: '12:30', location: '皇居二重橋', activity: '散步', notes: '皇室氣派', lat: 35.679, lng: 139.758, type: 'sightseeing' },
-      { id: '4-5', day: 4, time: '14:30', location: '宮下公園', activity: '散步/咖啡', notes: '澀谷新地標星巴克', lat: 35.662, lng: 139.702, type: 'sightseeing' },
-      { id: '4-6', day: 4, time: '16:00', location: 'SHIBUYA SKY', activity: '賞夕陽夜景', notes: '澀谷之巔', lat: 35.658, lng: 139.702, type: 'sightseeing' },
+      { id: '4-0', day: 4, time: '07:30', location: '西鐵 Inn 新宿', activity: '飯店出發', notes: '步行至新宿西口站 (E01)', lat: 35.694, lng: 139.695, type: 'stay' },
+      { id: '4-1', day: 4, time: '08:00', location: '築地場外市場', activity: '吃早餐', notes: '搭乘都營大江戶線至 築地市場站 (E18) A1出口', lat: 35.665, lng: 139.771, type: 'food' },
+      { id: '4-2', day: 4, time: '09:30', location: '小網神社', activity: '參拜', notes: '步行至築地站 (H10) 搭日比谷線至 人形町站 (H13) A2出口', lat: 35.685, lng: 139.777, type: 'sightseeing' },
+      { id: '4-3', day: 4, time: '11:00', location: '銀座 炸豬排 檍', activity: '午餐', notes: '人形町站 (H13) 搭日比谷線至 銀座站 (H08)', lat: 35.669, lng: 139.761, type: 'food' },
+      { id: '4-4', day: 4, time: '12:30', location: '皇居二重橋', activity: '散步', notes: '銀座站 (H08) 搭日比谷線至 日比谷站 (H07) 步行前往', lat: 35.679, lng: 139.758, type: 'sightseeing' },
+      { id: '4-5', day: 4, time: '14:30', location: '宮下公園', activity: '散步/咖啡', notes: '二重橋前站 (C10) 搭千代田線至 明治神宮前站 (C03) 步行', lat: 35.662, lng: 139.702, type: 'sightseeing' },
+      { id: '4-6', day: 4, time: '16:00', location: 'SHIBUYA SKY', activity: '賞夕陽夜景', notes: '步行前往 (需預約)', lat: 35.658, lng: 139.702, type: 'sightseeing' },
       { id: '4-7', day: 4, time: '17:30', location: 'AND THE FRIET', activity: '點心', notes: '澀谷 Hikarie B2F', lat: 35.658, lng: 139.703, type: 'food' },
-      { id: '4-8', day: 4, time: '18:30', location: 'Peter Luger Steakhouse', activity: '頂級晚餐', notes: '惠比壽分店', lat: 35.643, lng: 139.715, type: 'food' },
-      { id: '4-9', day: 4, time: '21:00', location: '西鐵 Inn 新宿', activity: '住宿', notes: '返回住宿', lat: 35.694, lng: 139.695, type: 'stay' }
+      { id: '4-8', day: 4, time: '18:30', location: 'Peter Luger Steakhouse', activity: '頂級晚餐', notes: '澀谷站 搭 JR 山手線至 惠比壽站，步行前往', lat: 35.643, lng: 139.715, type: 'food' },
+      { id: '4-9', day: 4, time: '21:00', location: '西鐵 Inn 新宿', activity: '住宿', notes: '惠比壽站 搭 JR 山手線至 新宿站', lat: 35.694, lng: 139.695, type: 'stay' }
     ]
   },
   {
@@ -117,13 +117,13 @@ const ITINERARY_DATA: DayPlan[] = [
     title: '招財貓、吉祥寺與返台',
     color: '#f97316',
     events: [
-      { id: '5-0', day: 5, time: '07:00', location: '西鐵 Inn 新宿', activity: '飯店出發', notes: '最後一天行程', lat: 35.694, lng: 139.695, type: 'stay' },
-      { id: '5-1', day: 5, time: '07:30', location: '明治神宮', activity: '晨間散步', notes: '森林芬多精', lat: 35.676, lng: 139.699, type: 'sightseeing' },
-      { id: '5-2', day: 5, time: '09:00', location: '豪德寺', activity: '參拜', notes: '招財貓起源', lat: 35.648, lng: 139.647, type: 'sightseeing' },
-      { id: '5-3', day: 5, time: '10:30', location: '下北澤', activity: '逛街', notes: '古著與咖啡', lat: 35.662, lng: 139.667, type: 'shopping' },
-      { id: '5-4', day: 5, time: '12:00', location: '根岸牛舌 吉祥寺店', activity: '午餐', notes: 'Negishi 精選', lat: 35.703, lng: 139.580, type: 'food' },
-      { id: '5-5', day: 5, time: '13:00', location: '井之頭恩賜公園', activity: '散步', notes: '舒適綠意', lat: 35.700, lng: 139.576, type: 'sightseeing' },
-      { id: '5-6', day: 5, time: '16:39', location: '新宿站', activity: '前往機場', notes: '成田特快 NEX', lat: 35.689, lng: 139.700, type: 'transport' },
+      { id: '5-0', day: 5, time: '07:00', location: '西鐵 Inn 新宿', activity: '飯店出發', notes: '新宿站 搭 JR 山手線至 原宿站 (表參道口)', lat: 35.694, lng: 139.695, type: 'stay' },
+      { id: '5-1', day: 5, time: '07:30', location: '明治神宮', activity: '晨間散步', notes: '步行前往', lat: 35.676, lng: 139.699, type: 'sightseeing' },
+      { id: '5-2', day: 5, time: '09:00', location: '豪德寺', activity: '參拜', notes: '明治神宮前站 (C03) 搭千代田線(直通小田急) 至 豪德寺站', lat: 35.648, lng: 139.647, type: 'sightseeing' },
+      { id: '5-3', day: 5, time: '10:30', location: '下北澤', activity: '逛街', notes: '豪德寺站 搭小田急線至 下北澤站', lat: 35.662, lng: 139.667, type: 'shopping' },
+      { id: '5-4', day: 5, time: '12:00', location: '根岸牛舌 吉祥寺店', activity: '午餐', notes: '下北澤站 搭京王井之頭線(急行) 至 吉祥寺站', lat: 35.703, lng: 139.580, type: 'food' },
+      { id: '5-5', day: 5, time: '13:00', location: '井之頭恩賜公園', activity: '散步', notes: '步行前往', lat: 35.700, lng: 139.576, type: 'sightseeing' },
+      { id: '5-6', day: 5, time: '16:39', location: '新宿站', activity: '前往機場', notes: '吉祥寺站 搭 JR 中央線(快速) 至 新宿站轉 NEX', lat: 35.689, lng: 139.700, type: 'transport' },
       { id: '5-7', day: 5, time: '20:20', location: '成田機場 (NRT)', activity: '搭機返台', notes: '第一航廈 BR195', lat: 35.772, lng: 140.392, type: 'flight' }
     ]
   }
