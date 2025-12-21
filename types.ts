@@ -6,6 +6,7 @@ export interface TripEvent {
   location: string;
   activity: string;
   notes: string;
+  importantNotes?: string;
   lat: number;
   lng: number;
   day: number;

@@ -216,6 +216,11 @@ const App: React.FC = () => {
                               </span>
                             </div>
                             <div className="text-xs text-slate-500 truncate">{event.activity}</div>
+                            {event.importantNotes && (
+                              <div className="text-[10px] text-red-500 font-bold mt-0.5">
+                                {event.importantNotes}
+                              </div>
+                            )}
                             {event.booking && (
                               <div className="flex items-center gap-1 mt-1 text-[10px] text-amber-600 font-medium bg-amber-50 px-1.5 py-0.5 rounded w-fit">
                                 <Ticket size={10} />
