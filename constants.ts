@@ -12,7 +12,26 @@ export const ITINERARY_DATA: DayPlan[] = [
       { id: '1-2', day: 1, time: '13:30', location: 'ORIX 租車成田機場店', activity: '取車手續', notes: '準備自駕之旅', lat: 35.765, lng: 140.385, type: 'transport' },
       { id: '1-3', day: 1, time: '15:30', location: '讀賣樂園', activity: '寶石燈飾秀', notes: '必看絕美點燈', lat: 35.625, lng: 139.517, type: 'sightseeing' },
       { id: '1-4', day: 1, time: '20:00', location: '梅丘壽司之美登利', activity: '晚餐', notes: '新百合之丘OPA店', lat: 35.602, lng: 139.508, type: 'food' },
-      { id: '1-5', day: 1, time: '21:30', location: 'Hotel Molino Shin-Yuri', activity: '住宿 Check-in', notes: '首晚歇息', lat: 35.602, lng: 139.508, type: 'stay' }
+      {
+        id: '1-5',
+        day: 1,
+        time: '21:30',
+        location: 'Hotel Molino Shin-Yuri',
+        activity: '住宿 Check-in',
+        notes: '首晚歇息',
+        lat: 35.602,
+        lng: 139.508,
+        type: 'stay',
+        booking: {
+          provider: 'Official Site',
+          number: '0VM5XXCV',
+          price: '30,114円',
+          payment: '現地での支払い',
+          status: 'ゴールド (Gold)',
+          people: 2,
+          period: '2026/01/20 - 2026/01/21'
+        }
+      }
     ]
   },
   {
@@ -25,7 +44,26 @@ export const ITINERARY_DATA: DayPlan[] = [
       { id: '2-1', day: 2, time: '09:30', location: '富士野生動物園', activity: '叢林巴士、自駕Safari', notes: '親近野生動物', lat: 35.247, lng: 138.838, type: 'sightseeing' },
       { id: '2-2', day: 2, time: '17:00', location: '御殿場 Premium Outlets', activity: '逛街購物', notes: '精品與風景', lat: 35.308, lng: 138.966, type: 'shopping' },
       { id: '2-3', day: 2, time: '21:00', location: '木之花之湯', activity: '溫泉享受', notes: '放鬆身心', lat: 35.305, lng: 138.968, type: 'sightseeing' },
-      { id: '2-4', day: 2, time: '22:00', location: 'HOTEL CLAD', activity: '住宿', notes: '御殿場住宿', lat: 35.308, lng: 138.966, type: 'stay' }
+      {
+        id: '2-4',
+        day: 2,
+        time: '22:00',
+        location: 'HOTEL CLAD',
+        activity: '住宿',
+        notes: '御殿場住宿',
+        lat: 35.308,
+        lng: 138.966,
+        type: 'stay',
+        booking: {
+          provider: 'Official Site',
+          number: '09MX8JW1',
+          price: '29,080円',
+          payment: 'オンラインカード決済',
+          status: 'ゴールド (Gold)',
+          people: 2,
+          period: '2026/01/21 - 2026/01/22'
+        }
+      }
     ]
   },
   {
@@ -38,7 +76,26 @@ export const ITINERARY_DATA: DayPlan[] = [
       { id: '3-1', day: 3, time: '09:30', location: '山中湖 KABA BUS', activity: '水陸巴士', notes: '湖上體驗', lat: 35.423, lng: 138.875, type: 'sightseeing' },
       { id: '3-2', day: 3, time: '11:30', location: '新倉山淺間公園', activity: '參拜/拍照', notes: '忠靈塔必拍', lat: 35.491, lng: 138.804, type: 'sightseeing' },
       { id: '3-3', day: 3, time: '13:00', location: '山麓園 Sanrokuen', activity: '午餐', notes: '傳統圍爐裏燒烤', lat: 35.485, lng: 138.773, type: 'food' },
-      { id: '3-4', day: 3, time: '16:30', location: '西鐵 Inn 新宿', activity: '還車/Check-in', notes: '入住西鐵 Inn', lat: 35.694, lng: 139.695, type: 'stay' },
+      {
+        id: '3-4',
+        day: 3,
+        time: '16:30',
+        location: '西鐵 Inn 新宿',
+        activity: '還車/Check-in',
+        notes: '入住西鐵 Inn',
+        lat: 35.694,
+        lng: 139.695,
+        type: 'stay',
+        booking: {
+          provider: 'Official Site',
+          number: '09MQGKHC',
+          price: '42,200円',
+          payment: '現地での支払い',
+          status: 'ゴールド (Gold)',
+          people: 2,
+          period: '2026/01/22 - 2026/01/24'
+        }
+      },
       { id: '3-5', day: 3, time: '17:00', location: '東京都廳 南展望室', activity: '賞夜景', notes: '免費俯瞰東京', lat: 35.689, lng: 139.691, type: 'sightseeing' },
       { id: '3-6', day: 3, time: '18:30', location: '牛舌の檸檬', activity: '晚餐', notes: '極厚切牛舌', lat: 35.693, lng: 139.698, type: 'food' },
       { id: '3-7', day: 3, time: '20:00', location: '回憶橫丁', activity: '夜生活', notes: '昭和風情街', lat: 35.693, lng: 139.699, type: 'sightseeing' },

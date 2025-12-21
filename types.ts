@@ -10,6 +10,15 @@ export interface TripEvent {
   lng: number;
   day: number;
   type: 'flight' | 'transport' | 'food' | 'stay' | 'sightseeing' | 'shopping';
+  booking?: {
+    provider?: string;
+    number?: string;
+    price?: string;
+    payment?: string;
+    status?: string;
+    people?: number;
+    period?: string;
+  };
 }
 
 export interface DayPlan {

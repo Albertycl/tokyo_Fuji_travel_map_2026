@@ -21,7 +21,8 @@ import {
   CloudSnow,
   Thermometer,
   Wind,
-  ExternalLink
+  ExternalLink,
+  Ticket
 } from 'lucide-react';
 import { ITINERARY_DATA } from './constants';
 import { fetchWeatherData } from './weatherService';
@@ -65,11 +66,33 @@ const MapController = ({ center, zoom }: { center: [number, number], zoom: numbe
   return null;
 };
 
+const MapInvalidator = () => {
+  const map = useMap();
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    const container = map.getContainer();
+    resizeObserver.observe(container);
+
+    // Force initial invalidation
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [map]);
+  return null;
+};
+
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'map' | 'itinerary' | 'export'>('map');
+  const [activeTab, setActiveTab] = useState<'map' | 'itinerary' | 'export' | 'booking'>('map');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showWeather, setShowWeather] = useState(false);
   const [selectedDay, setSelectedDay] = useState<number>(1);
+  const [itineraryFilter, setItineraryFilter] = useState<number | 'all'>('all');
   const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
   const [mapConfig, setMapConfig] = useState<{ center: [number, number], zoom: number }>({
     center: [35.6895, 139.6917],
@@ -193,6 +216,12 @@ const App: React.FC = () => {
                               </span>
                             </div>
                             <div className="text-xs text-slate-500 truncate">{event.activity}</div>
+                            {event.booking && (
+                              <div className="flex items-center gap-1 mt-1 text-[10px] text-amber-600 font-medium bg-amber-50 px-1.5 py-0.5 rounded w-fit">
+                                <Ticket size={10} />
+                                <span>已預訂</span>
+                              </div>
+                            )}
                           </div>
                         </button>
                         <a
@@ -222,21 +251,24 @@ const App: React.FC = () => {
                 <Menu size={20} />
               </button>
             )}
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
-              <button onClick={() => setActiveTab('map')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'map' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}>
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg overflow-x-auto no-scrollbar">
+              <button onClick={() => setActiveTab('map')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'map' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}>
                 <MapIcon size={16} /> <span className="hidden sm:inline">地圖視圖</span>
               </button>
-              <button onClick={() => setActiveTab('itinerary')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'itinerary' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}>
+              <button onClick={() => setActiveTab('itinerary')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'itinerary' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}>
                 <FileText size={16} /> <span className="hidden sm:inline">行程細節</span>
               </button>
-              <button onClick={() => setActiveTab('export')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'export' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}>
+              <button onClick={() => setActiveTab('booking')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'booking' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}>
+                <Ticket size={16} /> <span className="hidden sm:inline">住宿預訂</span>
+              </button>
+              <button onClick={() => setActiveTab('export')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'export' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}>
                 <Download size={16} /> <span className="hidden sm:inline">匯出資料</span>
               </button>
             </div>
           </div>
           <button
             onClick={() => setShowWeather(!showWeather)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-bold transition-all shadow-sm ${showWeather ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 hover:bg-slate-50'}`}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-bold transition-all shadow-sm shrink-0 ${showWeather ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 hover:bg-slate-50'}`}
           >
             <CloudSnow size={16} />
             <span className="hidden sm:inline">氣候預測</span>
@@ -266,6 +298,7 @@ const App: React.FC = () => {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 <MapController center={mapConfig.center} zoom={mapConfig.zoom} />
+                <MapInvalidator />
 
                 {currentDayData && (
                   <React.Fragment>
@@ -285,6 +318,20 @@ const App: React.FC = () => {
                               {getEventIcon(event.type)}
                               <span className="text-xs font-medium">{event.activity}</span>
                             </div>
+                            {event.booking && (
+                              <div className="mb-3 bg-amber-50 border border-amber-100 rounded-lg p-2">
+                                <div className="flex items-center gap-1.5 text-amber-700 font-bold text-xs mb-1">
+                                  <Ticket size={12} />
+                                  <span>預訂資訊</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-slate-600">
+                                  <div className="text-slate-400">預約編號</div>
+                                  <div className="font-mono font-medium">{event.booking.number}</div>
+                                  <div className="text-slate-400">金額</div>
+                                  <div className="font-medium">{event.booking.price}</div>
+                                </div>
+                              </div>
+                            )}
                             <a
                               href={getGoogleMapsUrl(event.location, event.lat, event.lng)}
                               target="_blank"
@@ -348,16 +395,42 @@ const App: React.FC = () => {
                 <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-slate-800">
                   <FileText className="text-blue-600" /> 詳細行程細節
                 </h2>
+
+                {/* Day Filter Tabs */}
+                <div className="flex flex-wrap gap-2 mb-6">
+                  <button
+                    onClick={() => setItineraryFilter('all')}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${itineraryFilter === 'all' ? 'bg-slate-800 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                  >
+                    全部行程
+                  </button>
+                  {ITINERARY_DATA.map(day => (
+                    <button
+                      key={day.day}
+                      onClick={() => setItineraryFilter(day.day)}
+                      className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${itineraryFilter === day.day ? 'text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                      style={itineraryFilter === day.day ? { backgroundColor: day.color } : {}}
+                    >
+                      Day {day.day}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
                   {weatherData.map(w => (
-                    <div key={w.day} className="p-3 border rounded-xl flex flex-col items-center justify-center bg-slate-50 text-center">
+                    <button
+                      key={w.day}
+                      onClick={() => setItineraryFilter(w.day)}
+                      className={`p-3 border rounded-xl flex flex-col items-center justify-center text-center transition-all ${itineraryFilter === w.day ? 'ring-2 ring-blue-500 bg-blue-50' : 'bg-slate-50 hover:bg-slate-100'}`}
+                    >
                       <span className="text-[10px] font-bold text-slate-400 uppercase">Day {w.day}</span>
                       <div className="my-1">{w.icon}</div>
                       <span className="text-xs font-bold text-slate-700">{w.temp}</span>
                       <span className="text-[10px] text-slate-500">{w.desc}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
+
                 <div className="border rounded-xl overflow-hidden shadow-sm">
                   <table className="min-w-full divide-y divide-slate-200">
                     <thead className="bg-slate-50">
@@ -369,41 +442,146 @@ const App: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-slate-200">
-                      {ITINERARY_DATA.flatMap(day => day.events.map((e, i) => ({ ...e, dayColor: day.color, order: i + 1, dayIdx: day.day }))).map((event, idx) => {
-                        const weather = weatherData.find(w => w.day === event.dayIdx);
-                        return (
-                          <tr key={`row-${idx}`} className="hover:bg-slate-50 transition-colors">
-                            <td className="px-4 py-3 whitespace-nowrap text-xs font-bold">
-                              <span className="px-2 py-0.5 rounded text-white" style={{ backgroundColor: event.dayColor }}>
-                                Day {event.dayIdx}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500 font-mono">{event.time}</td>
-                            <td className="px-4 py-3 text-sm text-slate-900">
-                              <div className="flex items-center gap-2 font-semibold">
-                                {event.location}
-                                <a
-                                  href={getGoogleMapsUrl(event.location, event.lat, event.lng)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-500 hover:text-blue-700"
-                                >
-                                  <ExternalLink size={12} />
-                                </a>
-                              </div>
-                              <div className="text-xs text-slate-500 mt-0.5">{event.activity}</div>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-slate-500 italic">
-                              <div className="flex items-center gap-1 text-[11px] text-blue-500 mb-1 font-bold">
-                                {weather?.icon} {weather?.temp}
-                              </div>
-                              {event.notes}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {ITINERARY_DATA
+                        .filter(day => itineraryFilter === 'all' || day.day === itineraryFilter)
+                        .flatMap(day => day.events.map((e, i) => ({ ...e, dayColor: day.color, order: i + 1, dayIdx: day.day })))
+                        .map((event, idx) => {
+                          const weather = weatherData.find(w => w.day === event.dayIdx);
+                          return (
+                            <tr key={`row-${idx}`} className="hover:bg-slate-50 transition-colors">
+                              <td className="px-4 py-3 whitespace-nowrap text-xs font-bold">
+                                <span className="px-2 py-0.5 rounded text-white" style={{ backgroundColor: event.dayColor }}>
+                                  Day {event.dayIdx}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500 font-mono">{event.time}</td>
+                              <td className="px-4 py-3 text-sm text-slate-900">
+                                <div className="flex items-center gap-2 font-semibold">
+                                  {event.location}
+                                  <a
+                                    href={getGoogleMapsUrl(event.location, event.lat, event.lng)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-500 hover:text-blue-700"
+                                  >
+                                    <ExternalLink size={12} />
+                                  </a>
+                                </div>
+                                <div className="text-xs text-slate-500 mt-0.5">{event.activity}</div>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-slate-500 italic">
+                                <div className="flex items-center gap-1 text-[11px] text-blue-500 mb-1 font-bold">
+                                  {weather?.icon} {weather?.temp}
+                                </div>
+                                {event.notes}
+                                {event.booking && (
+                                  <div className="mt-2 bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+                                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-200">
+                                      <div className="bg-amber-100 text-amber-700 p-1 rounded">
+                                        <Ticket size={14} />
+                                      </div>
+                                      <span className="text-xs font-bold text-slate-700">住宿預訂詳情</span>
+                                      <span className="ml-auto text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">
+                                        {event.booking.provider}
+                                      </span>
+                                    </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                                      <div>
+                                        <div className="text-[10px] text-slate-400 mb-0.5">預約編號</div>
+                                        <div className="font-mono font-bold text-slate-700">{event.booking.number}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-[10px] text-slate-400 mb-0.5">支付金額</div>
+                                        <div className="font-bold text-slate-700">{event.booking.price}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-[10px] text-slate-400 mb-0.5">付款方式</div>
+                                        <div className="text-slate-700">{event.booking.payment}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-[10px] text-slate-400 mb-0.5">入住期間</div>
+                                        <div className="text-slate-700">{event.booking.period}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'booking' && (
+            <div className="absolute inset-0 bg-white overflow-y-auto p-6 md:p-10">
+              <div className="max-w-4xl mx-auto">
+                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-slate-800">
+                  <Ticket className="text-amber-600" /> 住宿預訂管理
+                </h2>
+                <div className="space-y-6">
+                  {ITINERARY_DATA.flatMap(day =>
+                    day.events.filter(e => e.booking).map(e => ({ ...e, dayColor: day.color, dayIdx: day.day }))
+                  ).map((event, idx) => (
+                    <div key={idx} className="border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white">
+                      <div className="bg-slate-900 text-white p-4 flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                          <span className="px-2 py-0.5 rounded text-xs font-bold text-slate-900 bg-white">Day {event.dayIdx}</span>
+                          <h3 className="font-bold text-lg">{event.location}</h3>
+                        </div>
+                        <div className="text-xs bg-white/20 px-2 py-1 rounded">{event.booking?.status || 'Confirmed'}</div>
+                      </div>
+                      <div className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div className="space-y-4">
+                            <div>
+                              <div className="text-xs text-slate-400 uppercase font-bold mb-1">預約編號</div>
+                              <div className="text-2xl font-mono font-black text-slate-800 tracking-tight">{event.booking?.number}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-slate-400 uppercase font-bold mb-1">入住期間</div>
+                              <div className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                                <Calendar size={14} />
+                                {event.booking?.period}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-slate-400 uppercase font-bold mb-1">人數</div>
+                              <div className="text-sm font-medium text-slate-700">{event.booking?.people} 名</div>
+                            </div>
+                          </div>
+                          <div className="space-y-4">
+                            <div>
+                              <div className="text-xs text-slate-400 uppercase font-bold mb-1">支付金額</div>
+                              <div className="text-2xl font-bold text-amber-600">{event.booking?.price}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-slate-400 uppercase font-bold mb-1">付款方式</div>
+                              <div className="text-sm font-medium text-slate-700">{event.booking?.payment}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-slate-400 uppercase font-bold mb-1">訂房來源</div>
+                              <div className="text-sm font-medium text-slate-700">{event.booking?.provider}</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-6 pt-6 border-t flex justify-end">
+                          <a
+                            href={getGoogleMapsUrl(event.location, event.lat, event.lng)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors"
+                          >
+                            <MapIcon size={16} />
+                            查看地圖位置
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
