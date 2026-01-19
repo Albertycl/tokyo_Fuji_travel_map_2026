@@ -27,12 +27,23 @@ import {
   StickyNote,
   Edit3,
   Save,
-  XCircle
+  XCircle,
+  ClipboardList,
+  Check,
+  Square,
+  Lock,
+  LogOut,
+  AlertTriangle,
+  User,
+  Plus,
+  Trash2,
+  RotateCcw
 } from 'lucide-react';
 import { ITINERARY_DATA } from './constants';
 import { fetchWeatherData } from './weatherService';
 import { DayPlan, TripEvent, WeatherData } from './types';
-import { saveNote, loadAllNotes } from './supabaseClient';
+import { saveNote, loadAllNotes, saveChecklistItem, loadAllChecklistItems, resetAllChecklistItems, saveCustomItem, loadCustomItems, deleteCustomItem, CustomChecklistItem } from './supabaseClient';
+import { PACKING_CHECKLIST, ChecklistCategory } from './checklistData';
 
 // Initial empty state or loading state could be handled, but for now we start empty
 
@@ -94,7 +105,7 @@ const MapInvalidator = () => {
 };
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'map' | 'itinerary' | 'export' | 'booking' | 'flight'>('map');
+  const [activeTab, setActiveTab] = useState<'map' | 'itinerary' | 'export' | 'booking' | 'flight' | 'checklist'>('map');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showWeather, setShowWeather] = useState(false);
   const [selectedDay, setSelectedDay] = useState<number | 'all'>(1);
@@ -103,6 +114,22 @@ const App: React.FC = () => {
   const [editingEvent, setEditingEvent] = useState<string | null>(null);
   const [eventDetails, setEventDetails] = useState<Record<string, string>>({});
   const [savingNote, setSavingNote] = useState<string | null>(null);
+
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+
+  // Checklist state
+  const [checklistItems, setChecklistItems] = useState<Record<string, boolean>>({});
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['documents']));
+  const [customItems, setCustomItems] = useState<CustomChecklistItem[]>([]);
+  const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemNote, setNewItemNote] = useState('');
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Load notes from Supabase on mount
   useEffect(() => {
@@ -118,6 +145,183 @@ const App: React.FC = () => {
     };
     loadNotes();
   }, []);
+
+  // Load checklist items from Supabase on mount
+  useEffect(() => {
+    const loadChecklist = async () => {
+      const items = await loadAllChecklistItems();
+      if (Object.keys(items).length > 0) {
+        setChecklistItems(items);
+      } else {
+        // Fallback to localStorage if no items in DB yet
+        const saved = localStorage.getItem('packingChecklist');
+        if (saved) setChecklistItems(JSON.parse(saved));
+      }
+    };
+    loadChecklist();
+  }, []);
+
+  // Load custom items from Supabase on mount
+  useEffect(() => {
+    const loadCustom = async () => {
+      const items = await loadCustomItems();
+      if (items.length > 0) {
+        setCustomItems(items);
+      } else {
+        // Fallback to localStorage
+        const saved = localStorage.getItem('customChecklistItems');
+        if (saved) setCustomItems(JSON.parse(saved));
+      }
+    };
+    loadCustom();
+  }, []);
+
+  // Check for saved authentication
+  useEffect(() => {
+    const authStatus = sessionStorage.getItem('tripAuth');
+    if (authStatus === 'authenticated') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleLogin = () => {
+    if (username === 'yvonne' && password === 'neihu') {
+      setIsAuthenticated(true);
+      sessionStorage.setItem('tripAuth', 'authenticated');
+      setShowLoginModal(false);
+      setLoginError('');
+      setUsername('');
+      setPassword('');
+    } else {
+      setLoginError('帳號或密碼錯誤');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    sessionStorage.removeItem('tripAuth');
+  };
+
+  const toggleChecklistItem = async (itemId: string) => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
+    const newChecked = !checklistItems[itemId];
+    const updated = { ...checklistItems, [itemId]: newChecked };
+    setChecklistItems(updated);
+
+    // Save to Supabase
+    const success = await saveChecklistItem(itemId, newChecked);
+    if (!success) {
+      // Fallback to localStorage if Supabase fails
+      localStorage.setItem('packingChecklist', JSON.stringify(updated));
+    }
+  };
+
+  const getChecklistProgress = (category: ChecklistCategory) => {
+    const categoryCustomItems = customItems.filter(item => item.category_id === category.id);
+    const allCategoryItems = [...category.items, ...categoryCustomItems];
+    const checkedCount = allCategoryItems.filter(item => checklistItems[item.id]).length;
+    return { checked: checkedCount, total: allCategoryItems.length };
+  };
+
+  const getTotalProgress = () => {
+    const allBuiltInItems = PACKING_CHECKLIST.flatMap(cat => cat.items);
+    const allItems = [...allBuiltInItems, ...customItems];
+    const checkedCount = allItems.filter(item => checklistItems[item.id]).length;
+    return { checked: checkedCount, total: allItems.length };
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
+
+  const expandAllCategories = () => {
+    setExpandedCategories(new Set(PACKING_CHECKLIST.map(cat => cat.id)));
+  };
+
+  const collapseAllCategories = () => {
+    setExpandedCategories(new Set());
+  };
+
+  const handleAddItem = async (categoryId: string) => {
+    if (!newItemName.trim()) return;
+
+    const newItem: CustomChecklistItem = {
+      id: `custom-${Date.now()}`,
+      category_id: categoryId,
+      name: newItemName.trim(),
+      note: newItemNote.trim() || undefined
+    };
+
+    const updated = [...customItems, newItem];
+    setCustomItems(updated);
+
+    // Save to Supabase
+    const success = await saveCustomItem(newItem);
+    if (!success) {
+      localStorage.setItem('customChecklistItems', JSON.stringify(updated));
+    }
+
+    setNewItemName('');
+    setNewItemNote('');
+    setAddingToCategory(null);
+  };
+
+  const handleDeleteItem = async (itemId: string) => {
+    const updated = customItems.filter(item => item.id !== itemId);
+    setCustomItems(updated);
+
+    // Also remove from checked state
+    const updatedChecks = { ...checklistItems };
+    delete updatedChecks[itemId];
+    setChecklistItems(updatedChecks);
+
+    // Delete from Supabase
+    const success = await deleteCustomItem(itemId);
+    if (!success) {
+      localStorage.setItem('customChecklistItems', JSON.stringify(updated));
+    }
+  };
+
+  const handleResetAll = async () => {
+    // Reset all checkboxes to unchecked
+    const resetItems: Record<string, boolean> = {};
+
+    // Reset built-in items
+    PACKING_CHECKLIST.forEach(cat => {
+      cat.items.forEach(item => {
+        resetItems[item.id] = false;
+      });
+    });
+
+    // Reset custom items
+    customItems.forEach(item => {
+      resetItems[item.id] = false;
+    });
+
+    setChecklistItems(resetItems);
+    setShowResetConfirm(false);
+
+    // Save to Supabase
+    const success = await resetAllChecklistItems();
+    if (!success) {
+      localStorage.setItem('packingChecklist', JSON.stringify(resetItems));
+    }
+  };
+
+  const getCustomItemsForCategory = (categoryId: string) => {
+    return customItems.filter(item => item.category_id === categoryId);
+  };
 
   const saveEventDetails = async (eventId: string, details: string) => {
     setSavingNote(eventId);
@@ -211,14 +415,14 @@ const App: React.FC = () => {
       )}
 
       <aside className={`
-        fixed md:relative z-[1000] h-full w-80 bg-white border-r shadow-xl transition-all duration-300
+        fixed md:relative z-[1000] h-full w-[65vw] max-w-72 md:max-w-80 bg-white border-r shadow-xl transition-all duration-300
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:w-0 md:opacity-0'}
       `}>
         <div className="flex flex-col h-full">
           <div className="p-4 border-b flex justify-between items-center bg-slate-900 text-white">
             <div>
-              <h1 className="text-xl font-bold">2026 東京富士山</h1>
-              <p className="text-xs text-slate-400 tracking-wide">智能行程 & 氣候分析</p>
+              <h1 className="text-base md:text-xl font-bold">2026 東京富士山</h1>
+              <p className="text-[10px] md:text-xs text-slate-400 tracking-wide">智能行程 & 氣候分析</p>
             </div>
             <button onClick={() => setSidebarOpen(false)} className="md:hidden p-1 hover:bg-slate-800 rounded">
               <X size={20} />
@@ -234,15 +438,15 @@ const App: React.FC = () => {
                   key={day.day}
                   className={`rounded-xl border bg-white overflow-hidden shadow-sm hover:shadow-md transition-all ${isActiveDay ? 'ring-2 ring-offset-2 ring-slate-400' : ''}`}
                 >
-                  <div className="p-3 font-bold text-white flex items-center justify-between" style={{ backgroundColor: day.color }}>
-                    <div className="flex items-center gap-2">
-                      <Calendar size={18} />
+                  <div className="p-2 md:p-3 font-bold text-white flex items-center justify-between text-sm md:text-base" style={{ backgroundColor: day.color }}>
+                    <div className="flex items-center gap-1.5 md:gap-2">
+                      <Calendar size={16} className="md:w-[18px] md:h-[18px]" />
                       <div className="flex flex-col">
                         <span>Day {day.day}</span>
-                        <span className="text-[10px] font-normal opacity-80">{day.date}</span>
+                        <span className="text-[9px] md:text-[10px] font-normal opacity-80">{day.date}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 bg-black/20 px-2 py-0.5 rounded text-[11px] font-normal backdrop-blur-sm">
+                    <div className="flex items-center gap-1.5 bg-black/20 px-1.5 md:px-2 py-0.5 rounded text-[10px] md:text-[11px] font-normal backdrop-blur-sm">
                       {weather?.icon}
                       <span>{weather?.temp}</span>
                     </div>
@@ -253,10 +457,10 @@ const App: React.FC = () => {
                         <div className="flex items-start">
                           <button
                             onClick={() => handleFocusLocation(event)}
-                            className="flex-1 p-3 text-left hover:bg-slate-50 flex gap-3 transition-colors items-start pr-2"
+                            className="flex-1 p-2 md:p-3 text-left hover:bg-slate-50 flex gap-2 md:gap-3 transition-colors items-start pr-1 md:pr-2"
                           >
-                            <div className="flex flex-col items-center min-w-[32px]">
-                              <span className="text-[11px] font-bold h-6 w-6 rounded-full flex items-center justify-center border text-white mb-1 shadow-sm" style={{ backgroundColor: day.color, borderColor: 'white' }}>
+                            <div className="flex flex-col items-center min-w-[28px] md:min-w-[32px]">
+                              <span className="text-[10px] md:text-[11px] font-bold h-5 w-5 md:h-6 md:w-6 rounded-full flex items-center justify-center border text-white mb-1 shadow-sm" style={{ backgroundColor: day.color, borderColor: 'white' }}>
                                 {index + 1}
                               </span>
                               {event.travelTime && (
@@ -268,13 +472,13 @@ const App: React.FC = () => {
                               <span className="text-[10px] font-mono text-slate-400 whitespace-nowrap">{event.time}</span>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold flex items-center justify-between gap-1">
+                              <div className="text-xs md:text-sm font-semibold flex items-center justify-between gap-1">
                                 <span className="truncate">{event.location}</span>
                                 <span className="text-slate-300 group-hover:text-slate-600 shrink-0">
                                   {getEventIcon(event.type)}
                                 </span>
                               </div>
-                              <div className="text-xs text-slate-500 truncate">{event.activity}</div>
+                              <div className="text-[10px] md:text-xs text-slate-500 truncate">{event.activity}</div>
                               {event.importantNotes && (
                                 <div className="text-[10px] text-red-500 font-bold mt-0.5">
                                   {event.importantNotes}
@@ -296,7 +500,7 @@ const App: React.FC = () => {
                               </div>
                             </div>
                           </button>
-                          <div className="flex flex-col items-center gap-1 p-2">
+                          <div className="flex flex-col items-center gap-0.5 md:gap-1 p-1 md:p-2">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -441,6 +645,9 @@ const App: React.FC = () => {
               </button>
               <button onClick={() => setActiveTab('flight')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'flight' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}>
                 <Plane size={16} /> <span className="hidden sm:inline">機票資訊</span>
+              </button>
+              <button onClick={() => setActiveTab('checklist')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'checklist' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}>
+                <ClipboardList size={16} /> <span className="hidden sm:inline">攜帶清單</span>
               </button>
               <button onClick={() => setActiveTab('export')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'export' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}>
                 <Download size={16} /> <span className="hidden sm:inline">匯出資料</span>
@@ -1042,8 +1249,390 @@ const App: React.FC = () => {
               </div>
             </div>
           )}
+
+          {activeTab === 'checklist' && (
+            <div className="absolute inset-0 bg-slate-50 overflow-y-auto p-6 md:p-10">
+              <div className="max-w-4xl mx-auto">
+                {/* Header with auth status */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold flex items-center gap-2 text-slate-800">
+                      <ClipboardList className="text-purple-600" /> 攜帶清單
+                    </h2>
+                    <p className="text-sm text-slate-500 mt-1">出發前確認所有必需品</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {/* Progress indicator */}
+                    <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border shadow-sm">
+                      <div className="text-sm font-bold text-slate-700">
+                        {getTotalProgress().checked} / {getTotalProgress().total}
+                      </div>
+                      <div className="w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300"
+                          style={{ width: `${(getTotalProgress().checked / getTotalProgress().total) * 100}%` }}
+                        />
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        {Math.round((getTotalProgress().checked / getTotalProgress().total) * 100)}%
+                      </div>
+                    </div>
+                    {/* Auth button */}
+                    {isAuthenticated ? (
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-colors"
+                      >
+                        <User size={16} className="text-green-600" />
+                        <span className="hidden sm:inline">yvonne</span>
+                        <LogOut size={14} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setShowLoginModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-bold transition-colors"
+                      >
+                        <Lock size={16} />
+                        <span>登入編輯</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Expand/Collapse All buttons */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-sm text-slate-500">
+                    {isAuthenticated ? (
+                      <span className="flex items-center gap-2 text-green-600 font-medium">
+                        <Check size={16} /> 已登入，可勾選、新增、刪除項目
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">登入後可編輯清單</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isAuthenticated && (
+                      <button
+                        onClick={() => setShowResetConfirm(true)}
+                        className="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1"
+                      >
+                        <RotateCcw size={12} />
+                        重置全部
+                      </button>
+                    )}
+                    <button
+                      onClick={expandAllCategories}
+                      className="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                    >
+                      全部展開
+                    </button>
+                    <button
+                      onClick={collapseAllCategories}
+                      className="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                    >
+                      全部收合
+                    </button>
+                  </div>
+                </div>
+
+                {/* Checklist categories */}
+                <div className="space-y-4">
+                  {PACKING_CHECKLIST.map((category) => {
+                    const progress = getChecklistProgress(category);
+                    const isExpanded = expandedCategories.has(category.id);
+                    const isComplete = progress.checked === progress.total;
+
+                    return (
+                      <div
+                        key={category.id}
+                        className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${isComplete ? 'ring-2 ring-green-500 ring-offset-2' : ''}`}
+                      >
+                        {/* Category header */}
+                        <button
+                          onClick={() => toggleCategory(category.id)}
+                          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{category.emoji}</span>
+                            <div className="text-left">
+                              <div className="font-bold text-slate-800 flex items-center gap-2">
+                                {category.title}
+                                {isComplete && (
+                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">
+                                    完成
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-slate-400">
+                                {progress.checked} / {progress.total} 項目
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full transition-all duration-300 ${isComplete ? 'bg-green-500' : 'bg-purple-500'}`}
+                                style={{ width: `${(progress.checked / progress.total) * 100}%` }}
+                              />
+                            </div>
+                            {isExpanded ? <ChevronDown size={20} className="text-slate-400" /> : <ChevronRight size={20} className="text-slate-400" />}
+                          </div>
+                        </button>
+
+                        {/* Category items */}
+                        {isExpanded && (
+                          <div className="border-t border-slate-100">
+                            <div className="p-3 bg-slate-50 text-xs text-slate-500">
+                              {category.description}
+                            </div>
+                            <div className="divide-y divide-slate-100">
+                              {/* Built-in items */}
+                              {category.items.map((item) => {
+                                const isChecked = checklistItems[item.id] || false;
+                                return (
+                                  <div
+                                    key={item.id}
+                                    className={`flex items-start gap-3 p-4 transition-colors ${isChecked ? 'bg-green-50/50' : 'hover:bg-slate-50'}`}
+                                  >
+                                    <button
+                                      onClick={() => toggleChecklistItem(item.id)}
+                                      className={`mt-0.5 flex-shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                                        isChecked
+                                          ? 'bg-green-500 border-green-500 text-white'
+                                          : 'border-slate-300 hover:border-purple-500'
+                                      }`}
+                                    >
+                                      {isChecked && <Check size={14} strokeWidth={3} />}
+                                    </button>
+                                    <div className="flex-1 min-w-0">
+                                      <div className={`font-medium flex items-center gap-2 ${isChecked ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                                        {item.name}
+                                        {item.important && (
+                                          <AlertTriangle size={14} className="text-amber-500 flex-shrink-0" />
+                                        )}
+                                      </div>
+                                      {item.note && (
+                                        <div className={`text-xs mt-1 ${isChecked ? 'text-slate-400' : item.important ? 'text-amber-600 font-medium' : 'text-slate-500'}`}>
+                                          {item.note}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              {/* Custom items for this category */}
+                              {getCustomItemsForCategory(category.id).map((item) => {
+                                const isChecked = checklistItems[item.id] || false;
+                                return (
+                                  <div
+                                    key={item.id}
+                                    className={`flex items-start gap-3 p-4 transition-colors ${isChecked ? 'bg-green-50/50' : 'hover:bg-slate-50'}`}
+                                  >
+                                    <button
+                                      onClick={() => toggleChecklistItem(item.id)}
+                                      className={`mt-0.5 flex-shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                                        isChecked
+                                          ? 'bg-green-500 border-green-500 text-white'
+                                          : 'border-slate-300 hover:border-purple-500'
+                                      }`}
+                                    >
+                                      {isChecked && <Check size={14} strokeWidth={3} />}
+                                    </button>
+                                    <div className="flex-1 min-w-0">
+                                      <div className={`font-medium flex items-center gap-2 ${isChecked ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                                        {item.name}
+                                        <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded font-bold">自訂</span>
+                                      </div>
+                                      {item.note && (
+                                        <div className={`text-xs mt-1 ${isChecked ? 'text-slate-400' : 'text-slate-500'}`}>
+                                          {item.note}
+                                        </div>
+                                      )}
+                                    </div>
+                                    {isAuthenticated && (
+                                      <button
+                                        onClick={() => handleDeleteItem(item.id)}
+                                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="刪除項目"
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+
+                              {/* Add new item section */}
+                              {isAuthenticated && (
+                                <div className="p-4 bg-slate-50/50">
+                                  {addingToCategory === category.id ? (
+                                    <div className="space-y-3">
+                                      <input
+                                        type="text"
+                                        value={newItemName}
+                                        onChange={(e) => setNewItemName(e.target.value)}
+                                        placeholder="項目名稱"
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        autoFocus
+                                      />
+                                      <input
+                                        type="text"
+                                        value={newItemNote}
+                                        onChange={(e) => setNewItemNote(e.target.value)}
+                                        placeholder="備註 (選填)"
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                      />
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => handleAddItem(category.id)}
+                                          disabled={!newItemName.trim()}
+                                          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-300 text-white text-sm font-bold rounded-lg transition-colors"
+                                        >
+                                          新增
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setAddingToCategory(null);
+                                            setNewItemName('');
+                                            setNewItemNote('');
+                                          }}
+                                          className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-bold rounded-lg transition-colors"
+                                        >
+                                          取消
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => setAddingToCategory(category.id)}
+                                      className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700 font-medium"
+                                    >
+                                      <Plus size={16} />
+                                      新增項目
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Not logged in notice */}
+                {!isAuthenticated && (
+                  <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
+                    <Lock size={20} className="text-amber-600" />
+                    <div className="text-sm text-amber-800">
+                      <span className="font-bold">提示：</span>請登入後才能勾選清單項目，變更會自動儲存至雲端。
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </main>
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black/50 z-[2000] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Lock size={24} />
+                  <h3 className="text-xl font-bold">登入以編輯清單</h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowLoginModal(false);
+                    setLoginError('');
+                    setUsername('');
+                    setPassword('');
+                  }}
+                  className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">帳號</label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="請輸入帳號"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">密碼</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="請輸入密碼"
+                  />
+                </div>
+                {loginError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-medium">
+                    {loginError}
+                  </div>
+                )}
+                <button
+                  onClick={handleLogin}
+                  className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
+                >
+                  登入
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 bg-black/50 z-[2000] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-red-500 p-6 text-white">
+              <div className="flex items-center gap-3">
+                <RotateCcw size={24} />
+                <h3 className="text-xl font-bold">重置確認</h3>
+              </div>
+            </div>
+            <div className="p-6">
+              <p className="text-slate-600 mb-6">
+                確定要重置所有勾選項目嗎？此操作會將所有項目設為未勾選狀態。
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleResetAll}
+                  className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors"
+                >
+                  確定重置
+                </button>
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="flex-1 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-colors"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
